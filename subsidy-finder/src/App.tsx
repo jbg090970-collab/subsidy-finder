@@ -1,5 +1,6 @@
+import { Device } from "@apps-in-toss/web-framework";
 import { FixedBottomCTA, Result } from "@toss/tds-mobile";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 
 import {
   REGIONS,
@@ -8,6 +9,7 @@ import {
   type BenefitResult,
   type SearchFilter,
 } from "./benefits";
+import { loadConditions, loadUserKey, saveConditions } from "./persistence";
 import "./App.css";
 
 const TARGET_ICONS: Record<SearchFilter["target"], string> = {
@@ -38,10 +40,21 @@ function SearchIcon() {
   );
 }
 
+// 토스 앱 안에서는 웹뷰 밖(기본 브라우저)으로 공고 원문을 열어요.
+function openExternal(e: MouseEvent<HTMLAnchorElement>, url: string) {
+  e.preventDefault();
+  Device.openURL(url).catch(() => window.open(url, "_blank", "noopener,noreferrer"));
+}
+
 function BenefitCard({ benefit }: { benefit: BenefitResult }) {
   return (
     <li>
-      <a className="news-card" href={benefit.url} target="_blank" rel="noopener noreferrer">
+      <a
+        className="news-card"
+        href={benefit.url}
+        rel="noopener noreferrer"
+        onClick={(e) => openExternal(e, benefit.url)}
+      >
         <span className={ddayTone(benefit.dday)}>{ddayLabel(benefit.dday)}</span>
         <span className="news-body">
           <span className="news-title">{benefit.name}</span>
@@ -62,8 +75,31 @@ function App() {
   const [onlyOpen, setOnlyOpen] = useState(true);
   const [results, setResults] = useState<BenefitResult[] | null>(null);
   const resultsRef = useRef<HTMLElement>(null);
+  const userKeyRef = useRef<string | null>(null);
+
+  // 시작할 때 한 번만 식별키를 받고, 이 사용자가 마지막으로 쓴 검색 조건을 되살려요.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const userKey = await loadUserKey();
+      userKeyRef.current = userKey;
+      const saved = await loadConditions(userKey);
+      if (cancelled || !saved) return;
+      setKeyword(saved.keyword);
+      setAge(saved.age);
+      setRegion(saved.region);
+      setTarget(saved.target);
+      setOnlyOpen(saved.onlyOpen);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSearch = async () => {
+    if (userKeyRef.current) {
+      saveConditions(userKeyRef.current, { keyword, age, region, target, onlyOpen });
+    }
     const parsedAge = Number.parseInt(age, 10);
     const found = await searchBenefits({
       age: Number.isNaN(parsedAge) ? null : parsedAge,
