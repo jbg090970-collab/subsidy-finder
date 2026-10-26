@@ -102,6 +102,24 @@ button {
   color: #ffffff;
 }
 
+/* 지원금 종류: 검색창 바로 아래 가로로 넘기는 칩 줄 */
+.kind-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 0 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.kind-row::-webkit-scrollbar {
+  display: none;
+}
+
+.kind-row .chip {
+  flex: none;
+}
+
 .section {
   padding: 0 20px;
   margin-top: var(--spacing-lg);

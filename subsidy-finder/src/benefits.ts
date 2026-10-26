@@ -4,8 +4,22 @@
 
 export type Target = "청년" | "소상공인" | "육아" | "누구나";
 
+export const KINDS = [
+  "전체",
+  "현금 지원",
+  "임대료·시설",
+  "수수료 지원",
+  "의료·건강",
+  "창업·입점",
+  "판로·홍보",
+] as const;
+
+/** 지원금 종류. 검색창 아래 칩으로 고를 수 있어요. */
+export type Kind = Exclude<(typeof KINDS)[number], "전체">;
+
 export type Benefit = {
   id: string;
+  kind: Kind;
   name: string;
   agency: string;
   /** 시·도 이름. 전국 사업은 "전국" */
@@ -48,6 +62,7 @@ export const TARGETS = ["전체", "청년", "소상공인", "육아"] as const;
 const BENEFITS: Benefit[] = [
   {
     id: "PBLN_000000000127250",
+    kind: "임대료·시설",
     name: "광진구 우리동네 소상공인 경영주치의(시설개선)",
     agency: "서울신용보증재단",
     region: "서울",
@@ -60,6 +75,7 @@ const BENEFITS: Benefit[] = [
   },
   {
     id: "PBLN_000000000127377",
+    kind: "임대료·시설",
     name: "해운대구 청년 창업자 임차료 지원",
     agency: "부산 해운대구",
     region: "부산",
@@ -74,6 +90,7 @@ const BENEFITS: Benefit[] = [
   },
   {
     id: "PBLN_000000000127164",
+    kind: "창업·입점",
     name: "익산시 청년공유주방 예비창업자 모집",
     agency: "전북 익산시",
     region: "전북",
@@ -88,6 +105,7 @@ const BENEFITS: Benefit[] = [
   },
   {
     id: "PBLN_000000000127173",
+    kind: "창업·입점",
     name: "김제전통시장 청년몰 입점 모집",
     agency: "전북 김제시",
     region: "전북",
@@ -102,6 +120,7 @@ const BENEFITS: Benefit[] = [
   },
   {
     id: "PBLN_000000000127192",
+    kind: "임대료·시설",
     name: "서귀포시 청년농업인 농지임대료 지원",
     agency: "제주 서귀포시",
     region: "제주",
@@ -116,6 +135,7 @@ const BENEFITS: Benefit[] = [
   },
   {
     id: "119200000174",
+    kind: "현금 지원",
     name: "청년어촌정착지원",
     agency: "해양수산부",
     region: "전국",
@@ -130,6 +150,7 @@ const BENEFITS: Benefit[] = [
   },
   {
     id: "PBLN_000000000127171",
+    kind: "수수료 지원",
     name: "공주시 소상공인 카드수수료 지원",
     agency: "충남 공주시",
     region: "충남",
@@ -142,6 +163,7 @@ const BENEFITS: Benefit[] = [
   },
   {
     id: "PBLN_000000000127263",
+    kind: "수수료 지원",
     name: "고령군 소상공인 카드수수료 지원",
     agency: "경상북도경제진흥원",
     region: "경북",
@@ -154,6 +176,7 @@ const BENEFITS: Benefit[] = [
   },
   {
     id: "PBLN_000000000127287",
+    kind: "판로·홍보",
     name: "포항시 소상공인 무료 택시지붕광고",
     agency: "경북 포항시",
     region: "경북",
@@ -166,6 +189,7 @@ const BENEFITS: Benefit[] = [
   },
   {
     id: "PBLN_000000000127360",
+    kind: "임대료·시설",
     name: "소공인 클린제조환경조성 사업",
     agency: "소상공인시장진흥공단",
     region: "전국",
@@ -178,6 +202,7 @@ const BENEFITS: Benefit[] = [
   },
   {
     id: "PBLN_000000000127211",
+    kind: "수수료 지원",
     name: "평창군 소상공인 세무서비스 수수료 지원",
     agency: "강원 평창군",
     region: "강원",
@@ -190,6 +215,7 @@ const BENEFITS: Benefit[] = [
   },
   {
     id: "PBLN_000000000127233",
+    kind: "현금 지원",
     name: "경북 소상공인 출산장려 아이보듬",
     agency: "경상북도경제진흥원",
     region: "경북",
@@ -202,6 +228,7 @@ const BENEFITS: Benefit[] = [
   },
   {
     id: "135200005015",
+    kind: "현금 지원",
     name: "첫만남이용권",
     agency: "보건복지부",
     region: "전국",
@@ -214,6 +241,7 @@ const BENEFITS: Benefit[] = [
   },
   {
     id: "135200000114",
+    kind: "의료·건강",
     name: "고위험 임산부 의료비 지원",
     agency: "보건복지부",
     region: "전국",
@@ -226,6 +254,7 @@ const BENEFITS: Benefit[] = [
   },
   {
     id: "135200005050",
+    kind: "의료·건강",
     name: "2세 미만 영유아 입원진료비 면제",
     agency: "보건복지부",
     region: "전국",
@@ -238,6 +267,7 @@ const BENEFITS: Benefit[] = [
   },
   {
     id: "135200005045",
+    kind: "의료·건강",
     name: "전국민 마음투자 지원",
     agency: "보건복지부",
     region: "전국",
@@ -254,6 +284,7 @@ export type SearchFilter = {
   age: number | null;
   region: (typeof REGIONS)[number];
   target: (typeof TARGETS)[number];
+  kind: (typeof KINDS)[number];
   onlyOpen: boolean;
   /** 이름·지원내용·기관에서 찾을 검색어. 빈 문자열이면 무시 */
   keyword: string;
@@ -281,6 +312,7 @@ export async function searchBenefits(
   }))
     .filter((b) => {
       if (filter.onlyOpen && b.dday !== null && b.dday < 0) return false;
+      if (filter.kind !== "전체" && b.kind !== filter.kind) return false;
       const keyword = filter.keyword.trim().replace(/\s+/g, "");
       if (keyword) {
         const haystack = `${b.name}${b.support}${b.agency}${b.amount}`.replace(/\s+/g, "");

@@ -3,6 +3,7 @@ import { FixedBottomCTA, Result } from "@toss/tds-mobile";
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 
 import {
+  KINDS,
   REGIONS,
   TARGETS,
   searchBenefits,
@@ -72,6 +73,7 @@ function App() {
   const [age, setAge] = useState("");
   const [region, setRegion] = useState<SearchFilter["region"]>("전체");
   const [target, setTarget] = useState<SearchFilter["target"]>("전체");
+  const [kind, setKind] = useState<SearchFilter["kind"]>("전체");
   const [onlyOpen, setOnlyOpen] = useState(true);
   const [results, setResults] = useState<BenefitResult[] | null>(null);
   const resultsRef = useRef<HTMLElement>(null);
@@ -90,6 +92,8 @@ function App() {
       setRegion(saved.region);
       setTarget(saved.target);
       setOnlyOpen(saved.onlyOpen);
+      // 종류를 추가하기 전에 저장된 조건에는 kind가 없어요.
+      setKind(saved.kind ?? "전체");
     })();
     return () => {
       cancelled = true;
@@ -98,13 +102,14 @@ function App() {
 
   const handleSearch = async () => {
     if (userKeyRef.current) {
-      saveConditions(userKeyRef.current, { keyword, age, region, target, onlyOpen });
+      saveConditions(userKeyRef.current, { keyword, age, region, target, kind, onlyOpen });
     }
     const parsedAge = Number.parseInt(age, 10);
     const found = await searchBenefits({
       age: Number.isNaN(parsedAge) ? null : parsedAge,
       region,
       target,
+      kind,
       onlyOpen,
       keyword,
     });
@@ -137,6 +142,20 @@ function App() {
           <SearchIcon />
         </button>
       </form>
+
+      <div className="kind-row" role="group" aria-label="지원금 종류">
+        {KINDS.map((k) => (
+          <button
+            key={k}
+            type="button"
+            className={kind === k ? "chip chip--selected" : "chip"}
+            aria-pressed={kind === k}
+            onClick={() => setKind(k)}
+          >
+            {k}
+          </button>
+        ))}
+      </div>
 
       <section className="section">
         <h2 className="section-title">누구를 위한 지원금인가요?</h2>
