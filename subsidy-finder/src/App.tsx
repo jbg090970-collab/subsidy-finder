@@ -1,14 +1,5 @@
-import {
-  Chip,
-  ChipItem,
-  FixedBottomCTA,
-  ListRow,
-  Result,
-  SegmentedControl,
-  TextField,
-  Top,
-} from "@toss/tds-mobile";
-import { useRef, useState } from "react";
+import { FixedBottomCTA, Result } from "@toss/tds-mobile";
+import { useRef, useState, type FormEvent } from "react";
 
 import {
   REGIONS,
@@ -19,37 +10,58 @@ import {
 } from "./benefits";
 import "./App.css";
 
-function DdayText({ dday }: { dday: number | null }) {
-  if (dday === null) return <span className="dday dday--muted">상시</span>;
-  if (dday < 0) return <span className="dday dday--muted">마감</span>;
+const TARGET_ICONS: Record<SearchFilter["target"], string> = {
+  전체: "📋",
+  청년: "🎓",
+  소상공인: "🏪",
+  육아: "👶",
+};
+
+function ddayLabel(dday: number | null) {
+  if (dday === null) return "상시";
+  if (dday < 0) return "마감";
+  if (dday === 0) return "오늘";
+  return `D-${dday}`;
+}
+
+function ddayTone(dday: number | null) {
+  if (dday === null || dday < 0) return "thumb thumb--muted";
+  return dday <= 7 ? "thumb thumb--urgent" : "thumb";
+}
+
+function SearchIcon() {
   return (
-    <span className={dday <= 7 ? "dday dday--urgent" : "dday"}>
-      {dday === 0 ? "오늘 마감" : `D-${dday}`}
-    </span>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2.4" />
+      <path d="M16.5 16.5 21 21" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+    </svg>
   );
 }
 
-function SummaryCard({ results }: { results: BenefitResult[] }) {
-  const closingThisWeek = results.filter((b) => b.dday !== null && b.dday >= 0 && b.dday <= 7);
-  const always = results.filter((b) => b.dday === null);
+function BenefitCard({ benefit }: { benefit: BenefitResult }) {
   return (
-    <div className="summary-card">
-      <p className="summary-label">받을 수 있는 지원금</p>
-      <p className="summary-value">{results.length}개</p>
-      <p className="summary-desc">
-        이번 주 마감 {closingThisWeek.length}개 · 상시 신청 {always.length}개
-      </p>
-    </div>
+    <li>
+      <a className="news-card" href={benefit.url} target="_blank" rel="noopener noreferrer">
+        <span className={ddayTone(benefit.dday)}>{ddayLabel(benefit.dday)}</span>
+        <span className="news-body">
+          <span className="news-title">{benefit.name}</span>
+          <span className="news-meta">
+            <strong>{benefit.amount}</strong> · {benefit.agency} · {benefit.source}
+          </span>
+        </span>
+      </a>
+    </li>
   );
 }
 
 function App() {
+  const [keyword, setKeyword] = useState("");
   const [age, setAge] = useState("");
   const [region, setRegion] = useState<SearchFilter["region"]>("전체");
   const [target, setTarget] = useState<SearchFilter["target"]>("전체");
   const [onlyOpen, setOnlyOpen] = useState(true);
   const [results, setResults] = useState<BenefitResult[] | null>(null);
-  const resultsRef = useRef<HTMLDivElement>(null);
+  const resultsRef = useRef<HTMLElement>(null);
 
   const handleSearch = async () => {
     const parsedAge = Number.parseInt(age, 10);
@@ -58,110 +70,136 @@ function App() {
       region,
       target,
       onlyOpen,
+      keyword,
     });
     setResults(found);
     requestAnimationFrame(() => resultsRef.current?.scrollIntoView({ behavior: "smooth" }));
   };
 
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    handleSearch();
+  };
+
   return (
     <div className="page">
-      <Top
-        title={<Top.TitleParagraph size={22}>나에게 맞는 지원금 찾기</Top.TitleParagraph>}
-        subtitleBottom={
-          <Top.SubtitleParagraph size={17}>
-            조건을 알려주면 받을 수 있는 지원금을 골라드려요.
-          </Top.SubtitleParagraph>
-        }
-      />
+      <header className="header">
+        <h1 className="title">지원금 찾기</h1>
+        <p className="subtitle">조건에 맞는 정부·지자체 지원금을 빠르게 찾고 비교해요.</p>
+      </header>
 
-      <TextField
-        variant="box"
-        label="나이"
-        labelOption="sustain"
-        placeholder="만 나이를 입력해 주세요"
-        inputMode="numeric"
-        suffix="세"
-        value={age}
-        onChange={(e) => setAge(e.target.value.replace(/\D/g, "").slice(0, 3))}
-      />
+      <form className="search-bar" role="search" onSubmit={handleSubmit}>
+        <input
+          className="search-input"
+          type="search"
+          placeholder="지원금 이름이나 기관을 검색해 보세요"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          aria-label="지원금 검색"
+        />
+        <button className="search-button" type="submit" aria-label="검색">
+          <SearchIcon />
+        </button>
+      </form>
 
-      <div className="section" style={{ marginTop: 28 }}>
-        <h2 className="section-title">대상</h2>
-        <Chip size="small" wrap>
+      <section className="section">
+        <h2 className="section-title">누구를 위한 지원금인가요?</h2>
+        <div className="tile-grid">
           {TARGETS.map((t) => (
-            <ChipItem key={t} selected={target === t} onClick={() => setTarget(t)}>
-              {t}
-            </ChipItem>
+            <button
+              key={t}
+              type="button"
+              className={target === t ? "tile tile--selected" : "tile"}
+              aria-pressed={target === t}
+              onClick={() => setTarget(t)}
+            >
+              <span className="tile-icon" aria-hidden="true">
+                {TARGET_ICONS[t]}
+              </span>
+              <span className="tile-label">{t}</span>
+            </button>
           ))}
-        </Chip>
-      </div>
+        </div>
+      </section>
 
-      <div className="section">
+      <section className="section">
+        <h2 className="section-title">나이</h2>
+        <label className="age-field">
+          <input
+            className="age-input"
+            inputMode="numeric"
+            placeholder="만 나이 (선택)"
+            value={age}
+            onChange={(e) => setAge(e.target.value.replace(/\D/g, "").slice(0, 3))}
+          />
+          <span className="age-suffix">세</span>
+        </label>
+      </section>
+
+      <section className="section">
         <h2 className="section-title">사는 곳</h2>
-        <Chip size="small" wrap>
+        <div className="chips">
           {REGIONS.map((r) => (
-            <ChipItem key={r} selected={region === r} onClick={() => setRegion(r)}>
+            <button
+              key={r}
+              type="button"
+              className={region === r ? "chip chip--selected" : "chip"}
+              aria-pressed={region === r}
+              onClick={() => setRegion(r)}
+            >
               {r}
-            </ChipItem>
+            </button>
           ))}
-        </Chip>
-      </div>
+        </div>
+      </section>
 
-      <div className="section">
+      <section className="section">
         <h2 className="section-title">신청 상태</h2>
-        <SegmentedControl
-          size="small"
-          value={onlyOpen ? "open" : "all"}
-          onChange={(v) => setOnlyOpen(v === "open")}
-        >
-          <SegmentedControl.Item value="open">신청 가능</SegmentedControl.Item>
-          <SegmentedControl.Item value="all">마감 포함</SegmentedControl.Item>
-        </SegmentedControl>
-      </div>
+        <div className="chips">
+          {[
+            { value: true, label: "신청 가능한 것만" },
+            { value: false, label: "마감 포함" },
+          ].map((o) => (
+            <button
+              key={o.label}
+              type="button"
+              className={onlyOpen === o.value ? "chip chip--selected" : "chip"}
+              aria-pressed={onlyOpen === o.value}
+              onClick={() => setOnlyOpen(o.value)}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      </section>
 
-      <div ref={resultsRef}>
-        {results !== null && (
-          <>
-            <div className="divider" />
-            {results.length === 0 ? (
-              <Result
-                title="조건에 맞는 지원금이 없어요"
-                description="지역이나 대상을 바꿔서 다시 찾아보세요."
-              />
-            ) : (
-              <>
-                <SummaryCard results={results} />
-                <ul style={{ margin: 0, padding: 0 }}>
-                  {results.map((b) => (
-                    <ListRow
-                      key={b.id}
-                      withTouchEffect
-                      onClick={() => window.open(b.url, "_blank", "noopener,noreferrer")}
-                      contents={
-                        <ListRow.Texts
-                          type="2RowTypeA"
-                          top={b.name}
-                          bottom={`${b.support} · ${b.agency}`}
-                        />
-                      }
-                      right={
-                        <span className="row-right">
-                          <span className="amount">{b.amount}</span>
-                          <DdayText dday={b.dday} />
-                        </span>
-                      }
-                    />
-                  ))}
-                </ul>
-                <p className="notice">
-                  보조금24·기업마당 공고를 바탕으로 안내해요. 신청 전에 원문에서 자격요건과
-                  신청기간을 꼭 확인해 주세요.
-                </p>
-              </>
-            )}
-          </>
-        )}
-      </div>
+      <section ref={resultsRef} className="results">
+        {results !== null &&
+          (results.length === 0 ? (
+            <Result
+              title="조건에 맞는 지원금이 없어요"
+              description="검색어나 지역, 대상을 바꿔서 다시 찾아보세요."
+            />
+          ) : (
+            <>
+              <div className="results-header">
+                <h2 className="results-title">
+                  검색 결과 <em>{results.length}</em>건
+                </h2>
+                <span className="results-sort">마감 임박순</span>
+              </div>
+              <ul className="news-list">
+                {results.map((b) => (
+                  <BenefitCard key={b.id} benefit={b} />
+                ))}
+              </ul>
+              <p className="notice">
+                보조금24·기업마당 공고를 바탕으로 안내해요. 신청 전에 원문에서 자격요건과
+                신청기간을 꼭 확인해 주세요.
+              </p>
+            </>
+          ))}
+      </section>
 
       <FixedBottomCTA onClick={handleSearch}>
         {results === null ? "지원금 찾기" : "이 조건으로 다시 찾기"}

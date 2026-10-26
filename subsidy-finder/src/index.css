@@ -4,9 +4,9 @@
   font-family: sans-serif;
 }
 
-/* 토스 앱 안에서는 TDS가 Toss Product Sans를 쓰고, 그 밖(PC 브라우저 등)에서는 Pretendard로 보여줘요. */
+/* 디자인 가이드에 맞춰 어디서나 Pretendard를 우선 써요. */
 html body {
-  font-family: "Toss Product Sans", "Pretendard Variable", Pretendard, -apple-system,
+  font-family: "Pretendard Variable", Pretendard, -apple-system,
     BlinkMacSystemFont, "Apple SD Gothic Neo", Roboto, "Noto Sans KR", sans-serif;
   -webkit-font-smoothing: antialiased;
 }

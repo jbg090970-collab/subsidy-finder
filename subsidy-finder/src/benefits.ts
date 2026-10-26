@@ -255,6 +255,8 @@ export type SearchFilter = {
   region: (typeof REGIONS)[number];
   target: (typeof TARGETS)[number];
   onlyOpen: boolean;
+  /** 이름·지원내용·기관에서 찾을 검색어. 빈 문자열이면 무시 */
+  keyword: string;
 };
 
 export type BenefitResult = Benefit & {
@@ -279,6 +281,11 @@ export async function searchBenefits(
   }))
     .filter((b) => {
       if (filter.onlyOpen && b.dday !== null && b.dday < 0) return false;
+      const keyword = filter.keyword.trim().replace(/\s+/g, "");
+      if (keyword) {
+        const haystack = `${b.name}${b.support}${b.agency}${b.amount}`.replace(/\s+/g, "");
+        if (!haystack.includes(keyword)) return false;
+      }
       if (filter.region !== "전체" && b.region !== "전국" && b.region !== filter.region) {
         return false;
       }
